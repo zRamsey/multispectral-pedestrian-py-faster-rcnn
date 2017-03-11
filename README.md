@@ -5,7 +5,10 @@ Code used in reproducing results in our paper [Multispectral deep neural network
 
 This repository is a folk of py-faster-rcnn [offciel code](https://github.com/rbgirshick/py-faster-rcnn), written by Ross Girshick. For how to install the required softwares and set up the code in right configuration, e.g., Caffe, pycaffe, please refer to their original [README.md](https://github.com/rbgirshick/py-faster-rcnn/blob/master/README.md).
 
-<img src="examples/caltech_result_1.png" width="300px" height="300px"/> <img src="examples/caltech_result_2.png" width="300px" height="300px"/>
+### Caltech results
+<img src="examples/caltech_result_1.png" width="400px" height="400px"/> <img src="examples/caltech_result_2.png" width="400px" height="400px"/>
+
+### KAIST results
 
 ### License
 
