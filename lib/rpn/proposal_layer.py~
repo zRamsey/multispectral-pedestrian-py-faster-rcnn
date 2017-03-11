@@ -13,7 +13,7 @@ from generate_anchors import generate_anchors
 from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
 from fast_rcnn.nms_wrapper import nms
 
-DEBUG = False
+DEBUG = True
 
 class ProposalLayer(caffe.Layer):
     """
@@ -27,7 +27,6 @@ class ProposalLayer(caffe.Layer):
         print 'proposal_layer parameter file is {}'.format(self.param_str_)
 
         self._feat_stride = layer_params['feat_stride']
-        anchor_scales = layer_params.get('scales', (8, 16, 32))
         self._anchors = generate_anchors()
         self._num_anchors = self._anchors.shape[0]
 
@@ -145,7 +144,6 @@ class ProposalLayer(caffe.Layer):
         # 7. take after_nms_topN (e.g. 300)
         # 8. return the top proposals (-> RoIs top)
         keep = nms(np.hstack((proposals, scores)), nms_thresh)
-        # print len(keep)
         if post_nms_topN > 0:
             keep = keep[:post_nms_topN]
         proposals = proposals[keep, :]

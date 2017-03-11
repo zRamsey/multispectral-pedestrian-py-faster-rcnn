@@ -20,11 +20,20 @@ def prepare_roidb(imdb):
     each ground-truth box. The class with maximum overlap is also
     recorded.
     """
-    sizes = [PIL.Image.open(imdb.image_path_at(i)).size
-             for i in xrange(imdb.num_images)]
+    if cfg.NUM_INPUT_IMAGE == 1:
+        sizes = [PIL.Image.open(imdb.image_path_at(i)).size
+                 for i in xrange(imdb.num_images)]
+    elif cfg.NUM_INPUT_IMAGE == 2:
+        sizes = [PIL.Image.open(imdb.image_path_at(i)[0]).size
+                 for i in xrange(imdb.num_images)]
+
     roidb = imdb.roidb
     for i in xrange(len(imdb.image_index)):
-        roidb[i]['image'] = imdb.image_path_at(i)
+        if cfg.NUM_INPUT_IMAGE == 1:
+            roidb[i]['image'] = imdb.image_path_at(i)
+        elif cfg.NUM_INPUT_IMAGE == 2:
+            roidb[i]['image_1'], roidb[i]['image_2'] = imdb.image_path_at(i)
+
         roidb[i]['width'] = sizes[i][0]
         roidb[i]['height'] = sizes[i][1]
         # need gt_overlaps as a dense array for argmax

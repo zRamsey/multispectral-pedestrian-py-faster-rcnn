@@ -11,6 +11,8 @@ from utils.timer import Timer
 import numpy as np
 import cv2
 
+DEBUG = False
+
 def _vis_proposals(im, dets, thresh=0.5):
     """Draw detected bounding boxes."""
     inds = np.where(dets[:, -1] >= thresh)[0]
@@ -84,6 +86,7 @@ def _get_image_blob(im):
 def im_proposals(net, im):
     """Generate RPN proposals on a single image."""
     blobs = {}
+
     blobs['data'], blobs['im_info'] = _get_image_blob(im)
     net.blobs['data'].reshape(*(blobs['data'].shape))
     net.blobs['im_info'].reshape(*(blobs['im_info'].shape))
@@ -96,16 +99,80 @@ def im_proposals(net, im):
     scores = blobs_out['scores'].copy()
     return boxes, scores
 
+def im_proposals_2in(net, im_1, im_2):
+    """Generate RPN proposals on a single image."""
+    blobs = {}
+
+    blobs['data1'], blobs['im_info'] = _get_image_blob(im_1)
+    blobs['data2'], blobs['im_info'] = _get_image_blob(im_2)
+
+    net.blobs['data1'].reshape(*(blobs['data1'].shape))
+    net.blobs['data2'].reshape(*(blobs['data2'].shape))
+    net.blobs['im_info'].reshape(*(blobs['im_info'].shape))
+    blobs_out = net.forward(
+            data1=blobs['data1'].astype(np.float32, copy=False),
+            data2=blobs['data2'].astype(np.float32, copy=False),
+            im_info=blobs['im_info'].astype(np.float32, copy=False))
+
+    scale = blobs['im_info'][0, 2]
+    #boxes = blobs_out['rois'][:, 1:].copy() / scale
+    #scores = blobs_out['scores'].copy()
+    boxes = blobs_out['rois'][:, 1:].copy() / scale
+    scores = blobs_out['scores'].copy()
+    return boxes, scores
+
+def im_proposals_2in_2out(net, im_1, im_2):
+    """Generate RPN proposals on a single image."""
+    blobs = {}
+
+    blobs['data1'], blobs['im_info'] = _get_image_blob(im_1)
+    blobs['data2'], blobs['im_info'] = _get_image_blob(im_2)
+
+    net.blobs['data1'].reshape(*(blobs['data1'].shape))
+    net.blobs['data2'].reshape(*(blobs['data2'].shape))
+    net.blobs['im_info'].reshape(*(blobs['im_info'].shape))
+    blobs_out = net.forward(
+            data1=blobs['data1'].astype(np.float32, copy=False),
+            data2=blobs['data2'].astype(np.float32, copy=False),
+            im_info=blobs['im_info'].astype(np.float32, copy=False))
+
+    scale = blobs['im_info'][0, 2]
+    boxes = blobs_out['rois'][:, 1:].copy() / scale
+    scores = blobs_out['scores'].copy()
+    #boxes = blobs_out['rois'][:, 1:].copy() / scale
+    #scores = blobs_out['scores'].copy()
+    #boxes_p = blobs_out['rois_p'][:, 1:].copy() / scale
+    #scores_p = blobs_out['scores_p'].copy()
+
+    #boxes = blobs_out['rois_merge'][:, 1:].copy() / scale
+    #scores = blobs_out['scores_merge'].copy()
+
+    #print scores.shape
+
+    return boxes, scores
+
 def imdb_proposals(net, imdb):
     """Generate RPN proposals on all images in an imdb."""
 
     _t = Timer()
     imdb_boxes = [[] for _ in xrange(imdb.num_images)]
     for i in xrange(imdb.num_images):
-        im = cv2.imread(imdb.image_path_at(i))
-        _t.tic()
-        imdb_boxes[i], scores = im_proposals(net, im)
-        _t.toc()
+        if cfg.NUM_INPUT_IMAGE == 1:
+            if DEBUG:
+                print "Using one input image"
+            im = cv2.imread(imdb.image_path_at(i))
+            _t.tic()
+            imdb_boxes[i], scores = im_proposals(net, im)
+            _t.toc()
+        elif cfg.NUM_INPUT_IMAGE == 2:
+            if DEBUG:
+                print "Using two input image"
+            im_1 = cv2.imread(imdb.image_path_at(i)[0])
+            im_2 = cv2.imread(imdb.image_path_at(i)[1])
+            _t.tic()
+            imdb_boxes[i], scores = im_proposals_2in_2out(net, im_1,im_2)
+            _t.toc()
+
         print 'im_proposals: {:d}/{:d} {:.3f}s' \
               .format(i + 1, imdb.num_images, _t.average_time)
         if 0:

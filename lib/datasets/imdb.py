@@ -99,9 +99,17 @@ class imdb(object):
       return [PIL.Image.open(self.image_path_at(i)).size[0]
               for i in xrange(self.num_images)]
 
+    def _get_widths_mul(self):
+      return [PIL.Image.open(self.image_path_at(i)[0]).size[0]
+              for i in xrange(self.num_images)]
+
     def append_flipped_images(self):
         num_images = self.num_images
-        widths = self._get_widths()
+        if cfg.NUM_INPUT_IMAGE == 1:
+            widths = self._get_widths()
+        elif cfg.NUM_INPUT_IMAGE == 2:
+            widths = self._get_widths_mul()
+
         for i in xrange(num_images):
             boxes = self.roidb[i]['boxes'].copy()
             oldx1 = boxes[:, 0].copy()

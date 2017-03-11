@@ -183,6 +183,274 @@ def im_detect(net, im, boxes=None):
 
     return scores, pred_boxes
 
+def im_detect_2in(net, im1, im2, boxes=None):
+    """Detect object classes in an image given object proposals.
+
+    Arguments:
+        net (caffe.Net): Fast R-CNN network to use
+        im (ndarray): color image to test (in BGR order)
+        boxes (ndarray): R x 4 array of object proposals or None (for RPN)
+
+    Returns:
+        scores (ndarray): R x K array of object class scores (K includes
+            background as object category 0)
+        boxes (ndarray): R x (4*K) array of predicted bounding boxes
+    """
+    blobs_1, im_scales = _get_blobs(im1, boxes)
+    blobs_2, im_scales = _get_blobs(im2, boxes)
+
+    # When mapping from image ROIs to feature map ROIs, there's some aliasing
+    # (some distinct image ROIs get mapped to the same feature ROI).
+    # Here, we identify duplicate feature ROIs, so we only compute features
+    # on the unique subset.
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        v = np.array([1, 1e3, 1e6, 1e9, 1e12])
+        hashes = np.round(blobs_1['rois'] * cfg.DEDUP_BOXES).dot(v)
+        _, index, inv_index = np.unique(hashes, return_index=True,
+                                        return_inverse=True)
+        blobs_1['rois'] = blobs_1['rois'][index, :]
+        boxes = boxes[index, :]
+
+    if cfg.TEST.HAS_RPN:
+        im_blob_1 = blobs_1['data']
+        im_blob_2 = blobs_2['data']
+        blobs_1['im_info'] = np.array(
+            [[im_blob_1.shape[2], im_blob_1.shape[3], im_scales[0]]],
+            dtype=np.float32)
+
+    # reshape network inputs
+    net.blobs['data1'].reshape(*(blobs_1['data'].shape))
+    net.blobs['data2'].reshape(*(blobs_2['data'].shape))
+    if cfg.TEST.HAS_RPN:
+        net.blobs['im_info'].reshape(*(blobs_1['im_info'].shape))
+    else:
+        net.blobs['rois'].reshape(*(blobs_1['rois'].shape))
+
+    # do forward
+    forward_kwargs = {'data1': blobs_1['data'].astype(np.float32, copy=False),
+                      'data2': blobs_2['data'].astype(np.float32, copy=False)}
+    if cfg.TEST.HAS_RPN:
+        forward_kwargs['im_info'] = blobs_1['im_info'].astype(np.float32, copy=False)
+    else:
+        forward_kwargs['rois'] = blobs_1['rois'].astype(np.float32, copy=False)
+    blobs_out = net.forward(**forward_kwargs)
+
+    if cfg.TEST.HAS_RPN:
+        assert len(im_scales) == 1, "Only single-image batch implemented"
+        rois = net.blobs['rois'].data.copy()
+        # unscale back to raw image space
+        boxes = rois[:, 1:5] / im_scales[0]
+
+    if cfg.TEST.SVM:
+        # use the raw scores before softmax under the assumption they
+        # were trained as linear SVMs
+        scores = net.blobs['cls_score'].data
+    else:
+        # use softmax estimated probabilities
+        scores = blobs_out['cls_prob']
+
+    if cfg.TEST.BBOX_REG:
+        # Apply bounding-box regression deltas
+        box_deltas = blobs_out['bbox_pred']
+        pred_boxes = bbox_transform_inv(boxes, box_deltas)
+        pred_boxes = clip_boxes(pred_boxes, im1.shape)
+    else:
+        # Simply repeat the boxes, once for each class
+        pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        # Map scores and predictions back to the original set of boxes
+        scores = scores[inv_index, :]
+        pred_boxes = pred_boxes[inv_index, :]
+
+    return scores, pred_boxes
+
+
+''' 
+#version 1
+def im_detect_2in_fuse(net, im1, im2, boxes=None):
+    """Detect object classes in an image given object proposals.
+
+    Arguments:
+        net (caffe.Net): Fast R-CNN network to use
+        im (ndarray): color image to test (in BGR order)
+        boxes (ndarray): R x 4 array of object proposals or None (for RPN)
+
+    Returns:
+        scores (ndarray): R x K array of object class scores (K includes
+            background as object category 0)
+        boxes (ndarray): R x (4*K) array of predicted bounding boxes
+    """
+    blobs_1, im_scales = _get_blobs(im1, boxes)
+    blobs_2, im_sclaes = _get_blobs(im2, boxes)
+
+    # When mapping from image ROIs to feature map ROIs, there's some aliasing
+    # (some distinct image ROIs get mapped to the same feature ROI).
+    # Here, we identify duplicate feature ROIs, so we only compute features
+    # on the unique subset.
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        v = np.array([1, 1e3, 1e6, 1e9, 1e12])
+        hashes = np.round(blobs_1['rois'] * cfg.DEDUP_BOXES).dot(v)
+        _, index, inv_index = np.unique(hashes, return_index=True,
+                                        return_inverse=True)
+        blobs_1['rois'] = blobs_1['rois'][index, :]
+        boxes = boxes[index, :]
+
+    if cfg.TEST.HAS_RPN:
+        im_blob_1 = blobs_1['data']
+        im_blob_2 = blobs_2['data']
+        blobs_1['im_info'] = np.array(
+            [[im_blob_1.shape[2], im_blob_1.shape[3], im_scales[0]]],
+            dtype=np.float32)
+
+    # reshape network inputs
+    net.blobs['data1'].reshape(*(blobs_1['data'].shape))
+    net.blobs['data2'].reshape(*(blobs_2['data'].shape))
+    if cfg.TEST.HAS_RPN:
+        net.blobs['im_info'].reshape(*(blobs_1['im_info'].shape))
+    else:
+        net.blobs['rois'].reshape(*(blobs_1['rois'].shape))
+
+    # do forward
+    forward_kwargs = {'data1': blobs_1['data'].astype(np.float32, copy=False),
+                      'data2': blobs_2['data'].astype(np.float32, copy=False)}
+
+    if cfg.TEST.HAS_RPN:
+        forward_kwargs['im_info'] = blobs_1['im_info'].astype(np.float32, copy=False)
+    else:
+        forward_kwargs['rois'] = blobs_1['rois'].astype(np.float32, copy=False)
+    blobs_out = net.forward(**forward_kwargs)
+
+    if cfg.TEST.HAS_RPN:
+        assert len(im_scales) == 1, "Only single-image batch implemented"
+        rois = net.blobs['rois'].data.copy()
+        # unscale back to raw image space
+        boxes = rois[:, 1:5] / im_scales[0]
+
+    # use softmax estimated probabilities
+    scores = net.blobs['cls_prob'].data
+    scores_p = net.blobs['cls_prob_p'].data
+    mode_score = net.blobs['mode_score'].data
+    scores_fuse = blobs_out['cls_prob_fuse']
+
+    if cfg.TEST.BBOX_REG:
+        # Apply bounding-box regression deltas
+        box_deltas = blobs_out['bbox_pred']
+        # box_deltas = net.blobs['bbox_pred'].data
+        pred_boxes = bbox_transform_inv(boxes, box_deltas)
+        pred_boxes = clip_boxes(pred_boxes, im1.shape)
+
+        box_deltas_p = blobs_out['bbox_pred_p']
+        # box_deltas_p = net.blobs['bbox_pred_p'].data
+        pred_boxes_p = bbox_transform_inv(boxes, box_deltas_p)
+        pred_boxes_p = clip_boxes(pred_boxes_p, im1.shape)
+    else:
+        # Simply repeat the boxes, once for each class
+        pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        # Map scores and predictions back to the original set of boxes
+        scores_fuse = scores_fuse[inv_index, :]
+        pred_boxes = pred_boxes[inv_index, :]
+        pred_boxes_p = pred_boxes_p[inv_index, :]
+        scores = scores[inv_index, :]
+        scores_p = scores_p[inv_index, :]
+        mode_score = mode_score[inv_index, :]
+
+    return scores, scores_p, scores_fuse, mode_score, pred_boxes, pred_boxes_p
+'''
+
+def im_detect_2in_fuse(net, im1, im2, boxes=None):
+    """Detect object classes in an image given object proposals.
+
+    Arguments:
+        net (caffe.Net): Fast R-CNN network to use
+        im (ndarray): color image to test (in BGR order)
+        boxes (ndarray): R x 4 array of object proposals or None (for RPN)
+
+    Returns:
+        scores (ndarray): R x K array of object class scores (K includes
+            background as object category 0)
+        boxes (ndarray): R x (4*K) array of predicted bounding boxes
+    """
+    blobs_1, im_scales = _get_blobs(im1, boxes)
+    blobs_2, im_sclaes = _get_blobs(im2, boxes)
+
+    # When mapping from image ROIs to feature map ROIs, there's some aliasing
+    # (some distinct image ROIs get mapped to the same feature ROI).
+    # Here, we identify duplicate feature ROIs, so we only compute features
+    # on the unique subset.
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        v = np.array([1, 1e3, 1e6, 1e9, 1e12])
+        hashes = np.round(blobs_1['rois'] * cfg.DEDUP_BOXES).dot(v)
+        _, index, inv_index = np.unique(hashes, return_index=True,
+                                        return_inverse=True)
+        blobs_1['rois'] = blobs_1['rois'][index, :]
+        boxes = boxes[index, :]
+
+    if cfg.TEST.HAS_RPN:
+        im_blob_1 = blobs_1['data']
+        im_blob_2 = blobs_2['data']
+        blobs_1['im_info'] = np.array(
+            [[im_blob_1.shape[2], im_blob_1.shape[3], im_scales[0]]],
+            dtype=np.float32)
+
+    # reshape network inputs
+    net.blobs['data1'].reshape(*(blobs_1['data'].shape))
+    net.blobs['data2'].reshape(*(blobs_2['data'].shape))
+    if cfg.TEST.HAS_RPN:
+        net.blobs['im_info'].reshape(*(blobs_1['im_info'].shape))
+    else:
+        net.blobs['rois_merge'].reshape(*(blobs_1['rois'].shape))
+
+    # do forward
+    forward_kwargs = {'data1': blobs_1['data'].astype(np.float32, copy=False),
+                      'data2': blobs_2['data'].astype(np.float32, copy=False)}
+
+    if cfg.TEST.HAS_RPN:
+        forward_kwargs['im_info'] = blobs_1['im_info'].astype(np.float32, copy=False)
+    else:
+        forward_kwargs['rois_merge'] = blobs_1['rois'].astype(np.float32, copy=False)
+    blobs_out = net.forward(**forward_kwargs)
+
+    if cfg.TEST.HAS_RPN:
+        assert len(im_scales) == 1, "Only single-image batch implemented"
+        rois = net.blobs['rois_merge'].data.copy()
+        # unscale back to raw image space
+        boxes = rois[:, 1:5] / im_scales[0]
+
+    # use softmax estimated probabilities
+    scores = net.blobs['weighted_prob1'].data
+    scores_p = net.blobs['weighted_prob2'].data
+    mode_score = net.blobs['mode_score'].data
+    scores_fuse = blobs_out['cls_prob_fuse']
+
+    if cfg.TEST.BBOX_REG:
+        # Apply bounding-box regression deltas
+        box_deltas = blobs_out['bbox_pred']
+        # box_deltas = net.blobs['bbox_pred'].data
+        pred_boxes = bbox_transform_inv(boxes, box_deltas)
+        pred_boxes = clip_boxes(pred_boxes, im1.shape)
+
+        box_deltas_p = blobs_out['bbox_pred_p']
+        # box_deltas_p = net.blobs['bbox_pred_p'].data
+        pred_boxes_p = bbox_transform_inv(boxes, box_deltas_p)
+        pred_boxes_p = clip_boxes(pred_boxes_p, im1.shape)
+    else:
+        # Simply repeat the boxes, once for each class
+        pred_boxes = np.tile(boxes, (1, scores.shape[1]))
+
+    if cfg.DEDUP_BOXES > 0 and not cfg.TEST.HAS_RPN:
+        # Map scores and predictions back to the original set of boxes
+        scores_fuse = scores_fuse[inv_index, :]
+        pred_boxes = pred_boxes[inv_index, :]
+        pred_boxes_p = pred_boxes_p[inv_index, :]
+        scores = scores[inv_index, :]
+        scores_p = scores_p[inv_index, :]
+        mode_score = mode_score[inv_index, :]
+
+    return scores, scores_p, scores_fuse, mode_score, pred_boxes, pred_boxes_p
+
 def vis_detections(im, class_name, dets, thresh=0.3):
     """Visual debugging of detections."""
     import matplotlib.pyplot as plt
@@ -253,9 +521,15 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
             # ground truth.
             box_proposals = roidb[i]['boxes'][roidb[i]['gt_classes'] == 0]
 
-        im = cv2.imread(imdb.image_path_at(i))
+        print cfg.NUM_INPUT_IMAGE
         _t['im_detect'].tic()
-        scores, boxes = im_detect(net, im, box_proposals)
+        if cfg.NUM_INPUT_IMAGE == 1:
+            im1 = cv2.imread(imdb.image_path_at(i))
+            scores, boxes = im_detect(net, im1, box_proposals)
+        elif cfg.NUM_INPUT_IMAGE == 2:
+            im1 = cv2.imread(imdb.image_path_at(i)[0])
+            im2 = cv2.imread(imdb.image_path_at(i)[1])
+            scores, boxes = im_detect_2in(net, im1, im2, box_proposals)
         _t['im_detect'].toc()
 
         _t['misc'].tic()
@@ -269,7 +543,7 @@ def test_net(net, imdb, max_per_image=100, thresh=0.05, vis=False):
             keep = nms(cls_dets, cfg.TEST.NMS)
             cls_dets = cls_dets[keep, :]
             if vis:
-                vis_detections(im, imdb.classes[j], cls_dets)
+                vis_detections(im1, imdb.classes[j], cls_dets)
             all_boxes[j][i] = cls_dets
 
         # Limit to max_per_image detections *over all classes*

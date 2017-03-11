@@ -12,8 +12,6 @@ __sets = {}
 import datasets
 from datasets.caltech import caltech
 from datasets.kaist_rgb import kaist_rgb
-from datasets.kaist_thermal import kaist_thermal
-from datasets.kaist_fusion import kaist_fusion
 from datasets.pascal_voc import pascal_voc
 from datasets.coco import coco
 
@@ -30,27 +28,11 @@ __sets[name] = (lambda imageset = imageset: caltech('train04'))
 
 imageset = 'test-all';
 name = 'kaist_{}'.format(imageset)
-__sets[name] = (lambda imageset = imageset: kaist_rgb('test-all'))
+__sets[name] = (lambda imageset = imageset:datasets.kaist_rgb('test-all'))
 
 imageset = 'train-all02';
 name = 'kaist_{}'.format(imageset)
-__sets[name] = (lambda imageset = imageset: kaist_rgb('train-all02'))
-
-imageset = 'test-all-thermal';
-name = 'kaist_{}'.format(imageset)
-__sets[name] = (lambda imageset = imageset: kaist_thermal('test-all'))
-
-imageset = 'train-all02-thermal';
-name = 'kaist_{}'.format(imageset)
-__sets[name] = (lambda imageset = imageset: kaist_thermal('train-all02'))
-
-imageset = 'test-all-fusion';
-name = 'kaist_{}'.format(imageset)
-__sets[name] = (lambda imageset = imageset: kaist_fusion('test-all'))
-
-imageset = 'train-all02-fusion';
-name = 'kaist_{}'.format(imageset)
-__sets[name] = (lambda imageset = imageset: kaist_fusion('train-all02'))
+__sets[name] = (lambda imageset = imageset:datasets.kaist_rgb('train-all02'))
 
 # Set up voc_<year>_<split> using selective search "fast" mode
 for year in ['2007', '2012']:
