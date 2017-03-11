@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+# --------------------------------------------------------
+# Faster R-CNN
+# Copyright (c) 2015 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Ross Girshick
+# --------------------------------------------------------
+
 """
 Demo script showing detections in sample images.
 
@@ -11,7 +18,8 @@ import matplotlib
 import cPickle
 import _init_paths
 from fast_rcnn.config import cfg
-from fast_rcnn.test import im_detect
+# from fast_rcnn.test import im_detect
+from fast_rcnn.test import im_detect_2in
 from fast_rcnn.nms_wrapper import nms
 from utils.timer import Timer
 import matplotlib.pyplot as plt
@@ -75,7 +83,7 @@ def load_kitti_annotation(data_dir, index):
         vy1 = float(data[7]) -1
         vx2 = float(data[8]) + vx1
         vy2 = float(data[9]) + vy1
-    	ignore = float(data[10])
+        ignore = float(data[10])
 
         vrate = (float(data[9])*float(data[8]))/((float(data[3])+cfg.EPS)*(float(data[4])+cfg.EPS))
 
@@ -102,14 +110,17 @@ def demo_detection(net, data_dir, image_name, CLASSES, gt_roidb):
     """Detect object classes in an image using pre-computed object proposals."""
 #    print cfg.TEST.SCALES
     # Load the demo image
-    im_file = os.path.join(data_dir,'color', image_name + '.jpg')
-    print im_file
-    im = cv2.imread(im_file)
+    im1_file = os.path.join(data_dir,'color', image_name + '.jpg')
+    im2_file = os.path.join(data_dir,'thermal', image_name + '.jpg')
+    print im1_file
+    print im2_file
+    im1 = cv2.imread(im1_file)
+    im2 = cv2.imread(im2_file)
 
     # Detect all object classes and regress object bounds
     timer = Timer()
     timer.tic()
-    scores, boxes = im_detect(net, im)
+    scores, boxes = im_detect_2in(net, im1, im2)
     timer.toc()
     print ('Detection took {:.3f}s for '
            '{:d} object proposals').format(timer.total_time, boxes.shape[0])
@@ -138,7 +149,7 @@ def demo_detection(net, data_dir, image_name, CLASSES, gt_roidb):
         else:
             all_dets = np.vstack((all_dets, dets))
 
-    visual_detection_results(im, boxes, scores, CLASSES, gt_roidb, threds=0.5)
+    visual_detection_results(im1, boxes, scores, CLASSES, gt_roidb, threds=0.5)
     return all_dets
 
     # nms again
@@ -236,9 +247,9 @@ if __name__ == '__main__':
     cfg.TEST.HAS_RPN = True  # Use RPN for proposals
     args = parse_args()
     print args
-    model_dir = os.path.join(cfg.ROOT_DIR, 'models/kaist/VGG16')
-    prototxt = os.path.join(cfg.ROOT_DIR, 'models/kaist/VGG16', 'faster_rcnn_test.pt')
-    caffemodel = os.path.join(model_dir, 'VGG16_faster_rcnn_final_kaist_color.caffemodel')
+    model_dir = os.path.join(cfg.ROOT_DIR, 'models/kaist_fusion/VGG16')
+    prototxt = os.path.join(cfg.ROOT_DIR, 'models/kaist_fusion/VGG16', 'faster_rcnn_test.pt')
+    caffemodel = os.path.join(model_dir, 'VGG16_faster_rcnn_final_kaist_fusion.caffemodel')
 
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\nDid you run ./data/script/'
