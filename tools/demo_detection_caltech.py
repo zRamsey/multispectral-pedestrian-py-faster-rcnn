@@ -1,12 +1,5 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Faster R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
 """
 Demo script showing detections in sample images.
 
@@ -203,7 +196,7 @@ def visual_detection_results(im, boxes, scores, CLASSES, gt_roidb, threds = 0.9)
 
 
     plt.axis('off')
-    plt.tight_layout()
+    #plt.tight_layout()
     plt.draw()
 
 def save_detection_results(det_file, classes, dets):
