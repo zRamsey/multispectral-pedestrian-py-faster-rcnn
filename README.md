@@ -7,13 +7,18 @@ This repository is a folk of py-faster-rcnn [offciel code](https://github.com/rb
 
 ### Download pretrained models
 [VGG16 model on caltech](https://drive.google.com/open?id=0ByrJI3mShdW6WVBxQldmdnE2S2s) trained on Caltech pedestrian dataset.
+
 [VGG16 model on kaist (RGB input)](https://drive.google.com/open?id=0ByrJI3mShdW6LWNqT0tYQ3JteW8) trained on Kaist pedestrian dataset.
+
 [VGG16 model on kaist (multispectral input)](https://drive.google.com/open?id=0ByrJI3mShdW6R3R1dkE4QlNQUUk) trained on Kaist multispectral dataset.
+
 Save these models to `models/caltech/VGG16/`, `models/kaist/VGG16/`, and `models/kaist_fusion/VGG16/`, respectively.
 
 ### Run demos
 Run `sh ./run_demo.sh caltech` for images from Caltech.
+
 Run `sh ./run_demo.sh kaist-color` for images from Kaist.
+
 Run `sh ./run_demo.sh kaist-fusion` for multispectral images from Kaist.
 
 ### Caltech results
