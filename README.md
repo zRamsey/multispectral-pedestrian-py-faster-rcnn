@@ -9,6 +9,7 @@ This repository is a folk of py-faster-rcnn [offciel code](https://github.com/rb
 <img src="examples/caltech_result_1.png" width="400px" height="400px"/> <img src="examples/caltech_result_2.png" width="400px" height="400px"/>
 
 ### KAIST results
+<img src="examples/kaist_result_1.png" width="400px" height="400px"/> <img src="examples/kaist_result_2.png" width="400px" height="400px"/>
 
 ### License
 
