@@ -1,7 +1,7 @@
 ### Multispectral Deep Neural Networks for Pedestrian Detection
 Editted by Jingjing Liu, Rutgers University.
 
-<img src="examples/fusion_models.png" width="900px" height="300px"/>
+<img src="examples/fusion_models.png" width="900px" height="280px"/>
 
 Code used in reproducing results in our paper [Multispectral deep neural networks for pedestrian detection](http://paul.rutgers.edu/~jl1322/papers/BMVC16_liu.pdf) by Jingjing Liu, Shaoting Zhang, Shu Wang, and Dimitris N. Metaxas. BMVC 2016. [[project link]](http://paul.rutgers.edu/~jl1322/multispectral.htm).
 
