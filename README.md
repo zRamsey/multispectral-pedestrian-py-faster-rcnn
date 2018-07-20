@@ -1,9 +1,4 @@
 ### Multispectral Deep Neural Networks for Pedestrian Detection
-forkedd from ...
-
-<img src="examples/fusion_models.png" width="900px" height="250px"/>
-
-Code used in reproducing results in our paper [Multispectral deep neural networks for pedestrian detection](http://paul.rutgers.edu/~jl1322/papers/BMVC16_liu.pdf) by Jingjing Liu, Shaoting Zhang, Shu Wang, and Dimitris N. Metaxas. BMVC 2016. [[project link]](http://paul.rutgers.edu/~jl1322/multispectral.htm).
 
 This repository is a folk of multisepectral deepnet for pedetstrian detection[code](https://github.com/zRamsey/multispectral-pedestrian-py-faster-rcnn). For how to install the required softwares and set up the code in right configuration, e.g., Caffe, pycaffe, please refer to the most original [README.md](https://github.com/rbgirshick/py-faster-rcnn/blob/master/README.md).
 
@@ -28,7 +23,5 @@ Run `sh ./run_demo.sh kaist-fusion` for multispectral images from Kaist.
 
 ### test
 In the root directory, Run `./tools/test_net.py 
---gpu 0 
---def models/kaist_fusion/VGG16/faster_rcnn_test.pt 
---net models/kaist_fusion/VGG16/VGG16_faster_rcnn_final_kaist_fusion.caffemodel 
---cfg experiments/cfgs/faster_rcnn_end2end_fusion.yml --imdb kaist_test-all`for test the pretrianed kaist_fusion model
+--gpu 0  --def models/kaist_fusion/VGG16/faster_rcnn_test.pt  --net models/kaist_fusion/VGG16/VGG16_faster_rcnn_final_kaist_fusion.caffemodel --cfg experiments/cfgs/faster_rcnn_end2end_fusion.yml --imdb kaist_test-all`
+for test the pretrianed kaist_fusion model
